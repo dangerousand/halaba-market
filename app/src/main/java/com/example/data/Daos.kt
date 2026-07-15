@@ -8,6 +8,9 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE id = :id")
     suspend fun getUserById(id: String): UserEntity?
 
+    @Query("SELECT * FROM users WHERE email = :email")
+    suspend fun getUserByEmail(email: String): UserEntity?
+
     @Query("SELECT * FROM users WHERE role = :role")
     fun getUsersByRole(role: String): Flow<List<UserEntity>>
 
@@ -92,11 +95,17 @@ interface MeetingDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertMeeting(meeting: MeetingEntity)
 
+    @Query("SELECT * FROM meetings WHERE id = :meetingId")
+    suspend fun getMeetingById(meetingId: String): MeetingEntity?
+
     @Query("UPDATE meetings SET status = :status WHERE id = :meetingId")
     suspend fun updateMeetingStatus(meetingId: String, status: String)
 
     @Query("DELETE FROM meetings WHERE id = :meetingId")
     suspend fun deleteMeeting(meetingId: String)
+
+    @Query("SELECT * FROM meetings")
+    fun getAllMeetings(): Flow<List<MeetingEntity>>
 }
 
 @Dao
@@ -109,6 +118,9 @@ interface ReviewDao {
 
     @Query("SELECT AVG(rating) FROM reviews WHERE revieweeId = :userId")
     suspend fun getAverageRating(userId: String): Float?
+
+    @Query("SELECT * FROM reviews")
+    fun getAllReviews(): Flow<List<ReviewEntity>>
 }
 
 @Dao

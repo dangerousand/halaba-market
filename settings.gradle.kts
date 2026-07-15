@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Halaba Broker"
+rootProject.name = "Halaba Market"
 
 include(":app")

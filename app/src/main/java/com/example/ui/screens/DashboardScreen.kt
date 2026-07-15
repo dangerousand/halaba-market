@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ListingEntity
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 import androidx.lifecycle.viewModelScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 
 @Composable
 fun DashboardScreen(viewModel: MainViewModel) {
@@ -84,12 +86,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .clickable {
-                            val nextRole = when (currentUser?.role) {
-                                "buyer" -> "seller"
-                                "seller" -> "broker"
-                                "broker" -> "admin"
-                                else -> "buyer"
-                            }
+                            val nextRole = if (currentUser?.role == "admin") "buyer" else "admin"
                             viewModel.switchUserRole(nextRole)
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -97,7 +94,7 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     Icon(Icons.Default.Cached, "Switch", modifier = Modifier.size(12.dp), tint = HalabaSoftGreen)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "DEMO ROLE",
+                        text = if (currentUser?.role == "admin") "ADMIN MODE" else "USER MODE",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = HalabaSoftGreen
@@ -113,26 +110,17 @@ fun DashboardScreen(viewModel: MainViewModel) {
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                when (currentUser?.role) {
-                    "seller" -> SellerDashboard(
+                if (currentUser?.role == "admin") {
+                    AdminDashboard(
+                        viewModel = viewModel,
+                        allListings = allListings,
+                        allUsers = allUsers
+                    )
+                } else {
+                    MyMarketplaceHub(
                         viewModel = viewModel,
                         allListings = allListings,
                         onPublishClick = { showPublishForm = true }
-                    )
-                    "broker" -> BrokerDashboard(
-                        viewModel = viewModel,
-                        allListings = allListings,
-                        allUsers = allUsers
-                    )
-                    "admin" -> AdminDashboard(
-                        viewModel = viewModel,
-                        allListings = allListings,
-                        allUsers = allUsers
-                    )
-                    else -> BuyerDashboard(
-                        viewModel = viewModel,
-                        allListings = allListings,
-                        allUsers = allUsers
                     )
                 }
             }
@@ -160,94 +148,40 @@ fun DashboardScreen(viewModel: MainViewModel) {
     }
 }
 
-// ==================== 1. BUYER DASHBOARD ====================
+// ==================== 1. UNIFIED MARKETPLACE HUB ====================
 @Composable
-fun BuyerDashboard(
-    viewModel: MainViewModel,
-    allListings: List<ListingEntity>,
-    allUsers: List<UserEntity>
-) {
-    val savedListings = allListings.filter { it.favoriteCount > 0 }
-    
-    Column(modifier = Modifier.padding(16.dp)) {
-        // Buyer stats
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            BuyerStatWidget(title = "Saved Items", value = "${savedListings.size}", iconColor = HalabaCrimson, emoji = "❤️")
-            BuyerStatWidget(title = "Visits Booked", value = "1", iconColor = InfoBlue, emoji = "📅")
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Your Wishlist / Saved Listings",
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        if (savedListings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("❤️", fontSize = 32.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("No listings saved yet.", color = TextGray, fontSize = 12.sp)
-                }
-            }
-        } else {
-            savedListings.forEach { listing ->
-                SavedListingRow(listing = listing) {
-                    viewModel.loadListingDetail(listing.id)
-                    viewModel.currentScreenRoute = "detail"
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-        }
-    }
-}
-
-// ==================== 2. SELLER DASHBOARD ====================
-@Composable
-fun SellerDashboard(
+fun MyMarketplaceHub(
     viewModel: MainViewModel,
     allListings: List<ListingEntity>,
     onPublishClick: () -> Unit
 ) {
-    val sellerListings = allListings.filter { it.sellerId == viewModel.currentUserId }
-    val activeCount = sellerListings.count { !it.isSold }
-    val soldCount = sellerListings.count { it.isSold }
-    val totalViews = sellerListings.sumOf { it.viewCount }
-
+    val currentUserId = viewModel.currentUserId
+    val myListings = allListings.filter { it.sellerId == currentUserId }
+    val savedListings = allListings.filter { it.favoriteCount > 0 }
+    
+    val activeCount = myListings.count { !it.isSold }
+    val soldCount = myListings.count { it.isSold }
+    
     Column(modifier = Modifier.padding(16.dp)) {
-        // Stats grid
+        // Welcoming stats cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                SellerStatItem(label = "Active Items", count = "$activeCount", color = HalabaSoftGreen)
+            Box(modifier = Modifier.weight(1.3f)) {
+                SellerStatItem(label = "My Active Posts", count = "$activeCount", color = HalabaSoftGreen)
             }
-            Box(modifier = Modifier.weight(1f)) {
-                SellerStatItem(label = "Completed Sales", count = "$soldCount", color = HalabaGold)
+            Box(modifier = Modifier.weight(1.2f)) {
+                SellerStatItem(label = "Sold Items", count = "$soldCount", color = HalabaGold)
             }
-            Box(modifier = Modifier.weight(1f)) {
-                SellerStatItem(label = "Total Views", count = "$totalViews", color = InfoBlue)
+            Box(modifier = Modifier.weight(1.5f)) {
+                SellerStatItem(label = "Saved/Wishlist", count = "${savedListings.size}", color = InfoBlue)
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Create New Listing CTA Button
+        // Large Premium Publish CTA button
         Button(
             onClick = onPublishClick,
             modifier = Modifier.fillMaxWidth(),
@@ -257,114 +191,390 @@ fun SellerDashboard(
         ) {
             Icon(Icons.Default.AddCircle, "Publish")
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Publish New Product / Property", fontWeight = FontWeight.Bold)
+            Text("Publish Product / Property", fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Firebase Cloud Synchronization Card
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val syncLogs by viewModel.firebaseSyncLogs.collectAsState()
+        val syncStatus = viewModel.firebaseSyncStatus
+        val syncProgress = viewModel.firebaseSyncProgress
+        val isInitialized = viewModel.firebaseIsInitialized
 
-        Text(
-            text = "Your Current Publications",
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        if (sellerListings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No published listings yet.", color = TextGray)
-            }
-        } else {
-            sellerListings.forEach { listing ->
-                SellerListingRow(
-                    listing = listing,
-                    onSoldToggle = { viewModel.markSold(listing.id) },
-                    onDelete = { viewModel.removeListing(listing.id) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-// ==================== 3. BROKER DASHBOARD ====================
-@Composable
-fun BrokerDashboard(
-    viewModel: MainViewModel,
-    allListings: List<ListingEntity>,
-    allUsers: List<UserEntity>
-) {
-    val assignedListings = allListings.filter { it.assignedBrokerId == viewModel.currentUserId }
-    val completedCount = assignedListings.count { it.isSold }
-    val pendingNegotiations = assignedListings.count { !it.isSold }
-
-    Column(modifier = Modifier.padding(16.dp)) {
-        // Stats Cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            BrokerStatBox(label = "Assigned Deals", value = "${assignedListings.size}", color = HalabaSoftGreen, modifier = Modifier.weight(1f))
-            BrokerStatBox(label = "Completed Deals", value = "$completedCount", color = HalabaGold, modifier = Modifier.weight(1f))
+        LaunchedEffect(Unit) {
+            viewModel.checkFirebaseStatus(context)
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Matching assistant (Smart recommendation simulation)
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = HalabaDarkGreen.copy(alpha = 0.1f)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, HalabaSoftGreen.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "🧠", fontSize = 24.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Broker Smart Matchmaking Assistant",
-                        fontWeight = FontWeight.Bold,
-                        color = HalabaDarkGreen,
-                        fontSize = 14.sp
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("☁️", fontSize = 24.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Firebase Cloud Sync",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = if (isInitialized) "Status: Connected Live" else "Status: Sandbox Emulation",
+                                fontSize = 11.sp,
+                                color = if (isInitialized) SuccessGreen else AlertOrange,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isInitialized) SuccessGreen.copy(alpha = 0.15f) else HalabaGold.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isInitialized) "LIVE CLOUD" else "SANDBOX",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isInitialized) SuccessGreen else HalabaGold
+                        )
+                    }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text(
-                    text = "Newly matched listings with active buyers in Kebele 01:",
+                    text = "Securely synchronize your local listings, catalog items, and messaging sessions with the centralized Google Firebase server.",
                     fontSize = 11.sp,
-                    color = TextGray,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
 
-                // List matches
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(PureWhite)
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                if (syncStatus == "Syncing") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LinearProgressIndicator(
+                        progress = { syncProgress },
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
+                        color = HalabaSoftGreen,
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Syncing local database... ${(syncProgress * 100).toInt()}%",
+                        fontSize = 10.sp,
+                        color = HalabaSoftGreen,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Scrollable Terminal Logs when sync is initiated or has completed
+                if (syncLogs.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF1E1E1E))
+                            .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
                     ) {
-                        Column {
-                            Text(text = "TVS Red Bajaj 🛺", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                            Text(text = "Match level: 98% (Buyer Dagne Mulachew)", fontSize = 10.sp, color = SuccessGreen)
-                        }
-                        Button(
-                            onClick = {
-                                viewModel.chatPartnerId = "buyer_1"
-                                viewModel.currentScreenRoute = "chat"
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = HalabaSoftGreen),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("Connect", fontSize = 10.sp)
+                            items(syncLogs) { log ->
+                                Text(
+                                    text = log,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF00FF66),
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var showSetupInstructions by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = { viewModel.syncWithFirebase(context) },
+                        colors = ButtonDefaults.buttonColors(containerColor = HalabaSoftGreen),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = syncStatus != "Syncing",
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.CloudSync, "Sync")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (syncStatus == "Success") "Sync Again" else "Sync to Cloud",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { showSetupInstructions = !showSetupInstructions },
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Help, "Help", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (showSetupInstructions) "Hide Setup" else "Live Setup Guide",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (showSetupInstructions) {
+                        AlertDialog(
+                            onDismissRequest = { showSetupInstructions = false },
+                            title = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("🔑", fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Firebase Setup Instructions", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                }
+                            },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "To enable real, live Google Cloud database integration instead of sandbox simulation, please follow these simple steps:",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "1. Go to firebase.google.com and create a project.\n" +
+                                               "2. Add an Android Application with ID:\n   com.aistudio.halababroker.hkslqy\n" +
+                                               "3. Download the generated 'google-services.json' file.\n" +
+                                               "4. In the app's files explorer, place the downloaded file into the /app directory.\n" +
+                                               "5. The build system will automatically pick up your live credentials on the next refresh!",
+                                        fontSize = 11.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showSetupInstructions = false }) {
+                                    Text("Got It", color = HalabaSoftGreen, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Supabase Cloud Sync Card ---
+        val supabaseStatus = viewModel.supabaseSyncStatus
+        val supabaseProgress = viewModel.supabaseSyncProgress
+        val supabaseIsConfigured = viewModel.supabaseIsConfigured
+        val supabaseLogs by viewModel.supabaseSyncLogs.collectAsState(initial = emptyList())
+
+        LaunchedEffect(Unit) {
+            viewModel.checkSupabaseStatus()
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, Color(0xFF3F51B5).copy(alpha = 0.3f)) // Supabase Indigo/Blue
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("⚡", fontSize = 24.sp) // Supabase lightning bolt
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Supabase REST Backend",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = if (supabaseIsConfigured) "Status: Connected (rmzootosbnyhvpnbxely)" else "Status: Configuration Offline",
+                                fontSize = 11.sp,
+                                color = if (supabaseIsConfigured) SuccessGreen else AlertOrange,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (supabaseIsConfigured) SuccessGreen.copy(alpha = 0.15f) else HalabaGold.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (supabaseIsConfigured) "LIVE BACKEND" else "EMULATOR",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (supabaseIsConfigured) SuccessGreen else HalabaGold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Sync your user accounts, property listings, scheduled meetings, and client reviews with your dedicated Supabase PostgreSQL tables.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
+
+                if (supabaseStatus == "Syncing") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LinearProgressIndicator(
+                        progress = { supabaseProgress },
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)),
+                        color = Color(0xFF3F51B5),
+                        trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Syncing local tables to Supabase... ${(supabaseProgress * 100).toInt()}%",
+                        fontSize = 10.sp,
+                        color = Color(0xFF3F51B5),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Scrollable Supabase Logs
+                if (supabaseLogs.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF1E1E1E))
+                            .border(1.dp, Color(0xFF333333), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(supabaseLogs) { log ->
+                                Text(
+                                    text = log,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF00E5FF), // Supabase Cyan log text
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var showSupabaseSetup by remember { mutableStateOf(false) }
+
+                    Button(
+                        onClick = { viewModel.syncWithSupabase() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5)),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = supabaseStatus != "Syncing",
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.CloudSync, "Sync")
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (supabaseStatus == "Success") "Sync Tables Again" else "Sync to Supabase",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = { showSupabaseSetup = !showSupabaseSetup },
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Help, "Help", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (showSupabaseSetup) "Hide Guide" else "Supabase Guide",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (showSupabaseSetup) {
+                        AlertDialog(
+                            onDismissRequest = { showSupabaseSetup = false },
+                            title = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("⚡", fontSize = 20.sp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Supabase REST Setup Guide", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                }
+                            },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        text = "Your app is fully pre-integrated with your Supabase Project ID: 'rmzootosbnyhvpnbxely'!",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "To allow Supabase to accept these pushes, make sure to create the following tables in your Supabase SQL Editor:\n\n" +
+                                               "1. users (id primary key, name, role, \"phoneNumber\", email, bio, \"isVerified\", rating, \"avatarUrl\", kebele)\n" +
+                                               "2. listings (id primary key, title, description, category, subcategory, price, \"isNegotiable\", location, kebele, latitude, longitude, \"imageUrls\", \"videoUrl\", \"sellerId\", \"sellerName\", \"sellerPhone\", \"assignedBrokerId\", \"assignedBrokerName\", \"datePosted\", \"viewCount\", \"favoriteCount\", \"isVerified\", \"isApproved\", \"isSold\")\n" +
+                                               "3. meetings (id primary key, title, date, time, \"buyerId\", \"sellerId\", \"brokerId\", \"buyerName\", \"sellerName\", \"brokerName\", location, status, note)\n" +
+                                               "4. reviews (id primary key, \"reviewerId\", \"reviewerName\", \"revieweeId\", rating, comment, timestamp)\n" +
+                                               "5. notifications (id primary key, \"userId\", title, body, timestamp, \"isRead\")\n\n" +
+                                               "These schemas match the local models and synchronize securely over HTTPS via Postgrest REST APIs.",
+                                        fontSize = 10.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showSupabaseSetup = false }) {
+                                    Text("Understood", color = Color(0xFF3F51B5), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -372,22 +582,83 @@ fun BrokerDashboard(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            text = "Your Assigned Client Listings",
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
+        // Segmented Tab or headers for My Listings vs. Saved Wishlist
+        var selectedTab by remember { mutableStateOf(0) }
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = Color.Transparent,
+            contentColor = HalabaDarkGreen,
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                    color = HalabaSoftGreen
+                )
+            }
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text("My Active Sales", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text("My Saved Listings", fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+            )
+        }
 
-        if (assignedListings.isEmpty()) {
-            Text("No deals currently assigned.", color = TextGray)
-        } else {
-            assignedListings.forEach { listing ->
-                BrokerListingRow(listing = listing) {
-                    viewModel.loadListingDetail(listing.id)
-                    viewModel.currentScreenRoute = "detail"
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (selectedTab == 0) {
+            if (myListings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("📦", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("You haven't posted any products yet.", color = TextGray, fontSize = 12.sp)
+                    }
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+            } else {
+                myListings.forEach { listing ->
+                    SellerListingRow(
+                        listing = listing,
+                        onSoldToggle = { viewModel.markSold(listing.id) },
+                        onDelete = { viewModel.removeListing(listing.id) }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+            }
+        } else {
+            if (savedListings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("❤️", fontSize = 28.sp)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("No items saved yet.", color = TextGray, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                savedListings.forEach { listing ->
+                    SavedListingRow(listing = listing) {
+                        viewModel.loadListingDetail(listing.id)
+                        viewModel.currentScreenRoute = "detail"
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
         }
     }
@@ -774,31 +1045,85 @@ fun PublishFormDialog(
     onDismiss: () -> Unit,
     onSuccess: () -> Unit
 ) {
+    val currentUser = viewModel.currentUserState.collectAsState(initial = null).value
+    
     var title by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("Land") }
+    var category by remember { mutableStateOf("Agricultural Products") }
     var kebele by remember { mutableStateOf("Kebele 01") }
     var desc by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf(currentUser?.phoneNumber ?: "") }
     var isNegotiable by remember { mutableStateOf(true) }
-    var selectedImageRef by remember { mutableStateOf("") }
+    
+    // Simulate multiple images & videos
+    var imageList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var videoList by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    val categoriesList = listOf("Land", "Houses", "Apartments", "Rentals", "Bajaj", "Spices", "Livestock")
+    val categoriesList = listOf(
+        "Electronics", "Phones", "Clothing", "Shoes", "Furniture", 
+        "Livestock", "Agricultural Products", "Vehicles", "Houses", 
+        "Land", "Jobs", "Services", "Other"
+    )
     val kebelesList = listOf("Kebele 01", "Kebele 02", "Kebele 03", "Kebele 04", "Kebele 05")
 
+    if (viewModel.isUploading) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Processing & Uploading", fontWeight = FontWeight.Bold, color = HalabaDarkGreen) },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(
+                        progress = { viewModel.uploadProgress },
+                        color = HalabaSoftGreen,
+                        strokeWidth = 6.dp,
+                        modifier = Modifier.size(72.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = viewModel.currentUploadStatus,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${(viewModel.uploadProgress * 100).toInt()}%",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        color = HalabaDarkGreen
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Auto-compressing files to optimize size & data usage...",
+                        fontSize = 11.sp,
+                        color = TextGray,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Publish New Listing", fontWeight = FontWeight.Bold) },
+        onDismissRequest = { if (!viewModel.isUploading) onDismiss() },
+        title = { Text("Publish Product / Listing", fontWeight = FontWeight.Bold, color = HalabaDarkGreen) },
         text = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Listing Title (e.g., Mitmita wholesale)") },
+                    label = { Text("Product Title") },
+                    placeholder = { Text("e.g., Pure Halaba Red Pepper Sack") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -808,7 +1133,14 @@ fun PublishFormDialog(
                         onValueChange = { price = it },
                         label = { Text("Price (ETB)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.3f)
+                    )
+                    OutlinedTextField(
+                        value = phone,
+                        onValueChange = { phone = it },
+                        label = { Text("Contact Phone") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.weight(1.7f)
                     )
                 }
 
@@ -835,7 +1167,7 @@ fun PublishFormDialog(
                 }
 
                 // Custom Kebele selector
-                Text("Select Halaba Kebele:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray)
+                Text("Halaba City Kebele / Location:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -860,39 +1192,95 @@ fun PublishFormDialog(
                     value = desc,
                     onValueChange = { desc = it },
                     label = { Text("Detailed Description") },
+                    placeholder = { Text("Tell buyers about condition, negotiation, weight, etc...") },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 4
                 )
 
-                // Photo Selector Simulation
-                Text("Photos & Media:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray)
+                // Multiple Images Attachment Selector
+                Text("Attach Photos (Multiple):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(54.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable {
-                                selectedImageRef = "upload_simulate_photo"
+                                val nextIdx = imageList.size + 1
+                                imageList = imageList + "photo_attachment_$nextIdx"
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        if (selectedImageRef.isEmpty()) {
-                            Icon(Icons.Default.AddAPhoto, "Add", tint = TextGray)
-                        } else {
-                            Text(text = "📸 OK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = HalabaSoftGreen)
+                        Icon(Icons.Default.AddAPhoto, "Add Photo", tint = TextGray)
+                    }
+                    if (imageList.isEmpty()) {
+                        Text("No photos attached yet", fontSize = 11.sp, color = TextGray)
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                        ) {
+                            imageList.forEachIndexed { idx, _ ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(HalabaSoftGreen.copy(alpha = 0.15f))
+                                        .border(1.dp, HalabaSoftGreen, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("📸 P${idx + 1}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = HalabaDarkGreen)
+                                }
+                            }
                         }
                     }
-                    Text(
-                        text = if (selectedImageRef.isEmpty()) "Attach a product / property photo" else "Photo successfully attached!",
-                        fontSize = 11.sp,
-                        color = if (selectedImageRef.isEmpty()) TextGray else SuccessGreen,
-                        fontWeight = FontWeight.Medium
-                    )
+                }
+
+                // Multiple Videos Attachment Selector
+                Text("Attach Videos (Multiple):", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextGray)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable {
+                                val nextIdx = videoList.size + 1
+                                videoList = videoList + "video_attachment_$nextIdx"
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.VideoCall, "Add Video", tint = TextGray)
+                    }
+                    if (videoList.isEmpty()) {
+                        Text("No videos attached yet", fontSize = 11.sp, color = TextGray)
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.horizontalScroll(rememberScrollState())
+                        ) {
+                            videoList.forEachIndexed { idx, _ ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(HalabaGold.copy(alpha = 0.15f))
+                                        .border(1.dp, HalabaGold, RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("🎥 V${idx + 1}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = HalabaGold)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Row(
@@ -913,11 +1301,12 @@ fun PublishFormDialog(
                             title = title,
                             description = desc,
                             category = category,
-                            subcategory = "Sales",
                             price = price.toDoubleOrNull() ?: 0.0,
                             isNegotiable = isNegotiable,
                             kebele = kebele,
-                            imageRefs = selectedImageRef,
+                            phone = phone.ifEmpty { currentUser?.phoneNumber ?: "" },
+                            imageRefs = imageList.joinToString(",").ifEmpty { "market_placeholder" },
+                            videoRefs = videoList.joinToString(","),
                             onComplete = onSuccess
                         )
                     }
@@ -928,7 +1317,10 @@ fun PublishFormDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !viewModel.isUploading
+            ) {
                 Text("Cancel", color = HalabaCrimson)
             }
         }

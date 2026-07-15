@@ -14,6 +14,8 @@ class Repository(private val db: AppDatabase) {
     val allListings: Flow<List<ListingEntity>> = db.listingDao().getAllListings()
     val activeListings: Flow<List<ListingEntity>> = db.listingDao().getApprovedActiveListings()
     val allAds: Flow<List<AdEntity>> = db.adDao().getAllAds()
+    val allMeetings: Flow<List<MeetingEntity>> = db.meetingDao().getAllMeetings()
+    val allReviews: Flow<List<ReviewEntity>> = db.reviewDao().getAllReviews()
 
     init {
         // Pre-populate data asynchronously on startup if empty
@@ -24,6 +26,7 @@ class Repository(private val db: AppDatabase) {
 
     // --- Users ---
     suspend fun getUserById(id: String): UserEntity? = db.userDao().getUserById(id)
+    suspend fun getUserByEmail(email: String): UserEntity? = db.userDao().getUserByEmail(email)
     fun getUsersByRole(role: String): Flow<List<UserEntity>> = db.userDao().getUsersByRole(role)
     suspend fun insertUser(user: UserEntity) = db.userDao().insertUser(user)
     suspend fun updateUser(user: UserEntity) = db.userDao().updateUser(user)
@@ -50,6 +53,7 @@ class Repository(private val db: AppDatabase) {
 
     // --- Calendar & Meetings ---
     fun getMeetingsForUser(userId: String): Flow<List<MeetingEntity>> = db.meetingDao().getMeetingsForUser(userId)
+    suspend fun getMeetingById(meetingId: String): MeetingEntity? = db.meetingDao().getMeetingById(meetingId)
     suspend fun scheduleMeeting(meeting: MeetingEntity) = db.meetingDao().insertMeeting(meeting)
     suspend fun updateMeetingStatus(meetingId: String, status: String) = db.meetingDao().updateMeetingStatus(meetingId, status)
     suspend fun deleteMeeting(meetingId: String) = db.meetingDao().deleteMeeting(meetingId)
@@ -80,76 +84,83 @@ class Repository(private val db: AppDatabase) {
         val currentUsers = db.userDao().getAllUsers().firstOrNull()
         if (!currentUsers.isNullOrEmpty()) return@withContext
 
-        // 1. Initial Users (Admin, Brokers, Sellers, Buyers)
+        // 1. Initial Users (Admin and standard users)
         val admin = UserEntity(
             id = "admin_1",
             name = "Halaba City Admin Portal",
             role = "admin",
             phoneNumber = "+251910010101",
-            email = "admin@halababroker.com",
-            bio = "Official platform regulator and moderator for Halaba City Broker.",
+            email = "admin@halabamarket.com",
+            bio = "Official platform regulator and moderator for Halaba Market.",
             isVerified = true,
-            avatarUrl = ""
+            avatarUrl = "",
+            kebele = "Kebele 01",
+            password = "admin"
         )
         val broker1 = UserEntity(
             id = "broker_1",
-            name = "Muluken Hailu (Broker of the Week)",
-            role = "broker",
+            name = "Muluken Hailu",
+            role = "user",
             phoneNumber = "+251921345678",
-            email = "muluken.broker@gmail.com",
+            email = "muluken.user@gmail.com",
             bio = "Expert in Halaba commercial plots and residential properties. Over 8 years of local experience.",
             isVerified = true,
             rating = 4.9f,
             avatarUrl = "",
-            kebele = "Kebele 01"
+            kebele = "Kebele 01",
+            password = "1234"
         )
         val broker2 = UserEntity(
             id = "broker_2",
             name = "Chala Tolosa",
-            role = "broker",
+            role = "user",
             phoneNumber = "+251934567890",
-            email = "chala.broker@gmail.com",
+            email = "chala.user@gmail.com",
             bio = "Specialized in Bajaj vehicles, agricultural products, and livestock negotiations.",
             isVerified = true,
             rating = 4.7f,
             avatarUrl = "",
-            kebele = "Kebele 03"
+            kebele = "Kebele 03",
+            password = "1234"
         )
         val seller1 = UserEntity(
             id = "seller_1",
-            name = "Abebe Kebede",
-            role = "seller",
+            name = "Alemayehu Kebede",
+            role = "user",
             phoneNumber = "+251911223344",
             email = "abebe.k@gmail.com",
             bio = "Local commercial crop vendor and property owner in Halaba.",
             isVerified = true,
             rating = 4.5f,
             avatarUrl = "",
-            kebele = "Kebele 02"
+            kebele = "Kebele 02",
+            password = "1234"
         )
         val seller2 = UserEntity(
             id = "seller_2",
             name = "Halaba Agro Cooperative",
-            role = "seller",
+            role = "user",
             phoneNumber = "+251912556677",
             email = "coop@halaba.gov.et",
             bio = "Official cooperative offering high-grade agricultural input, seeds, and wholesale red pepper.",
             isVerified = true,
             rating = 4.8f,
             avatarUrl = "",
-            kebele = "Kebele 01"
+            kebele = "Kebele 01",
+            password = "1234"
         )
         val buyer1 = UserEntity(
             id = "buyer_1",
-            name = "Dagne Mulachew",
-            role = "buyer",
+            name = "Yonas Tesfaye",
+            role = "user",
             phoneNumber = "+251944556677",
             email = "buyer.demo@gmail.com",
             bio = "Local Halaba citizen looking for property and a Bajaj vehicle.",
-            isVerified = false,
+            isVerified = true,
             rating = 5.0f,
             avatarUrl = "",
-            kebele = "Kebele 01"
+            kebele = "Kebele 01",
+            password = "1234"
         )
 
         db.userDao().insertUser(admin)
@@ -172,9 +183,10 @@ class Repository(private val db: AppDatabase) {
                 location = "Near Halaba Roundabout",
                 kebele = "Kebele 01",
                 sellerId = "seller_1",
-                sellerName = "Abebe Kebede",
+                sellerName = "Alemayehu Kebede",
+                sellerPhone = "+251911223344",
                 assignedBrokerId = "broker_1",
-                assignedBrokerName = "Muluken Hailu (Broker of the Week)",
+                assignedBrokerName = "Muluken Hailu",
                 viewCount = 145,
                 favoriteCount = 28,
                 isVerified = true
@@ -190,9 +202,10 @@ class Repository(private val db: AppDatabase) {
                 location = "Residential Green Area",
                 kebele = "Kebele 02",
                 sellerId = "seller_1",
-                sellerName = "Abebe Kebede",
+                sellerName = "Alemayehu Kebede",
+                sellerPhone = "+251911223344",
                 assignedBrokerId = "broker_1",
-                assignedBrokerName = "Muluken Hailu (Broker of the Week)",
+                assignedBrokerName = "Muluken Hailu",
                 viewCount = 92,
                 favoriteCount = 14,
                 isVerified = true
@@ -201,7 +214,7 @@ class Repository(private val db: AppDatabase) {
                 id = "list_3",
                 title = "High-Grade Halaba Red Pepper (Mitmita & Berbere)",
                 description = "Premium grade, naturally sun-dried local Halaba red pepper. Known for its intense aroma, bright red color, and high pungency. Available for wholesale in 100kg sacks.",
-                category = "Spices",
+                category = "Agricultural Products",
                 subcategory = "Wholesale Agricultural",
                 price = 180.0, // Per Kg
                 isNegotiable = false,
@@ -209,6 +222,7 @@ class Repository(private val db: AppDatabase) {
                 kebele = "Kebele 01",
                 sellerId = "seller_2",
                 sellerName = "Halaba Agro Cooperative",
+                sellerPhone = "+251912556677",
                 assignedBrokerId = "broker_2",
                 assignedBrokerName = "Chala Tolosa",
                 viewCount = 310,
@@ -219,14 +233,15 @@ class Repository(private val db: AppDatabase) {
                 id = "list_4",
                 title = "TVS King Deluxe Bajaj - Red Body",
                 description = "Year 2024 model in pristine condition. Single owner, low mileage (12,000 km). Fully serviced with strong engine, red body, and custom decorative seats. Extremely reliable for city transport.",
-                category = "Bajaj",
+                category = "Vehicles",
                 subcategory = "Vehicles",
                 price = 240000.0,
                 isNegotiable = true,
                 location = "Halaba Main Station",
                 kebele = "Kebele 03",
                 sellerId = "seller_1",
-                sellerName = "Abebe Kebede",
+                sellerName = "Alemayehu Kebede",
+                sellerPhone = "+251911223344",
                 assignedBrokerId = "broker_2",
                 assignedBrokerName = "Chala Tolosa",
                 viewCount = 205,
@@ -245,6 +260,7 @@ class Repository(private val db: AppDatabase) {
                 kebele = "Kebele 04",
                 sellerId = "seller_2",
                 sellerName = "Halaba Agro Cooperative",
+                sellerPhone = "+251912556677",
                 assignedBrokerId = "broker_2",
                 assignedBrokerName = "Chala Tolosa",
                 viewCount = 85,
@@ -255,16 +271,17 @@ class Repository(private val db: AppDatabase) {
                 id = "list_6",
                 title = "Modern Commercial Shop Space for Rent",
                 description = "Newly finished 45 sqm retail boutique shop. Ground floor, double glass front, high foot traffic area right opposite Halaba Central Mall. Perfect for electronics, fashion, or pharmaceuticals.",
-                category = "Rentals",
+                category = "Houses",
                 subcategory = "Shops",
                 price = 15000.0, // Monthly
                 isNegotiable = true,
                 location = "Main Market Avenue",
                 kebele = "Kebele 01",
                 sellerId = "seller_1",
-                sellerName = "Abebe Kebede",
+                sellerName = "Alemayehu Kebede",
+                sellerPhone = "+251911223344",
                 assignedBrokerId = "broker_1",
-                assignedBrokerName = "Muluken Hailu (Broker of the Week)",
+                assignedBrokerName = "Muluken Hailu",
                 viewCount = 118,
                 favoriteCount = 19,
                 isVerified = true
@@ -303,16 +320,16 @@ class Repository(private val db: AppDatabase) {
             MessageEntity(
                 id = "msg_1",
                 senderId = "seller_1",
-                senderName = "Abebe Kebede",
+                senderName = "Alemayehu Kebede",
                 receiverId = "buyer_1",
-                text = "Hello Dagne! I heard from broker Muluken that you are interested in the Prime Land near the Roundabout. It's a great spot. Let me know when we can meet."
+                text = "Hello! I heard from our broker that you are interested in the Prime Land near the Roundabout. It's a great spot. Let me know when we can meet."
             ),
             MessageEntity(
                 id = "msg_2",
                 senderId = "broker_1",
                 senderName = "Muluken Hailu",
                 receiverId = "buyer_1",
-                text = "Welcome Dagne! I am your assigned broker. I can help negotiate the land or the residential house with Abebe. I've set up a meeting on the calendar for us."
+                text = "Welcome! I am your assigned broker. I can help negotiate the land or the residential house with the seller. I've set up a meeting on the calendar for us."
             )
         )
         for (msg in messages) {
@@ -324,7 +341,7 @@ class Repository(private val db: AppDatabase) {
             ReviewEntity(
                 id = "rev_1",
                 reviewerId = "buyer_1",
-                reviewerName = "Dagne Mulachew",
+                reviewerName = "Yonas Tesfaye",
                 revieweeId = "broker_1",
                 rating = 5.0f,
                 comment = "Excellent service! Muluken guided us through the entire land verification process with absolute transparency."
@@ -332,7 +349,7 @@ class Repository(private val db: AppDatabase) {
             ReviewEntity(
                 id = "rev_2",
                 reviewerId = "seller_1",
-                reviewerName = "Abebe Kebede",
+                reviewerName = "Alemayehu Kebede",
                 revieweeId = "broker_2",
                 rating = 4.5f,
                 comment = "Chala matched our TVS Bajaj with a buyer in less than three days. Highly recommended."
@@ -352,8 +369,8 @@ class Repository(private val db: AppDatabase) {
                 buyerId = "buyer_1",
                 sellerId = "seller_1",
                 brokerId = "broker_1",
-                buyerName = "Dagne Mulachew",
-                sellerName = "Abebe Kebede",
+                buyerName = "Yonas Tesfaye",
+                sellerName = "Alemayehu Kebede",
                 brokerName = "Muluken Hailu (Broker of the Week)",
                 location = "Halaba Roundabout Commercial Area",
                 status = "Confirmed",
@@ -369,15 +386,15 @@ class Repository(private val db: AppDatabase) {
             NotificationEntity(
                 id = "not_1",
                 userId = "buyer_1",
-                title = "Welcome to Halaba Broker!",
-                body = "Discover land, houses, Bajajs, livestock, and local spices directly. Your local experts are ready to assist.",
+                title = "Welcome to Halaba Market!",
+                body = "Discover land, houses, Bajajs, livestock, and local spices directly. Halaba's local buyers and sellers are ready to connect.",
                 isRead = false
             ),
             NotificationEntity(
                 id = "not_2",
                 userId = "buyer_1",
-                title = "New Message from Abebe Kebede",
-                body = "Abebe sent you a message: 'Hello Dagne! I heard from broker Muluken...'",
+                title = "New Message from Alemayehu Kebede",
+                body = "Alemayehu sent you a message: 'Hello! I heard from our broker...'",
                 isRead = false
             )
         )

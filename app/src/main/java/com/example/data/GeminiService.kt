@@ -81,7 +81,7 @@ object GeminiClient {
         }
 
         return try {
-            val systemContext = "You are Halaba AI, the official customer support chatbot for 'Halaba Broker' app in Halaba City, Ethiopia. Provide answers about land prices, Halaba's red pepper (Mitmita/Berbere) market, local Bajaj transport costs, and navigating Kebeles (Kebele 01 to Kebele 05). Keep answers extremely concise, polite, and practical."
+            val systemContext = "You are Halaba AI, the official customer support chatbot for 'Halaba Market' app in Halaba City, Ethiopia. Provide answers about land prices, Halaba's red pepper (Mitmita/Berbere) market, local Bajaj transport costs, and navigating Kebeles (Kebele 01 to Kebele 05). Keep answers extremely concise, polite, and practical."
             val fullPrompt = "$systemContext\n\nUser: $userPrompt\nHalaba AI:"
             
             val request = GeminiRequest(
@@ -93,7 +93,7 @@ object GeminiClient {
             )
             val response = api.generateContent(key, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text 
-                ?: "I couldn't generate a response. How else can I assist you with Halaba Broker?"
+                ?: "I couldn't generate a response. How else can I assist you with Halaba Market?"
         } catch (e: Exception) {
             simulateLocalHalabaAi(userPrompt)
         }
@@ -129,10 +129,10 @@ object GeminiClient {
                 "Our map integration lets you filter listings by these specific neighborhoods!"
             }
             query.contains("fee") || query.contains("payment") || query.contains("commission") || query.contains("free") -> {
-                "🤝 **Halaba Broker Platform is 100% FREE!**\n" +
+                "🤝 **Halaba Market Platform is 100% FREE!**\n" +
                 "- No listing publication fees.\n" +
                 "- No membership costs or subscription upgrades.\n" +
-                "- Designed to support our local buyers, sellers, and brokers. A modular payment structure can be integrated in the future, but currently, everything is free!"
+                "- Designed to support our local buyers and sellers. A modular payment structure can be integrated in the future, but currently, everything is free!"
             }
             query.contains("hello") || query.contains("hi") || query.contains("hey") || query.contains("selam") -> {
                 "Selam! I am Halaba AI, your virtual assistant. Ask me anything about Halaba City market prices (Red pepper, land, Bajaj, livestock) or how to contact brokers!"

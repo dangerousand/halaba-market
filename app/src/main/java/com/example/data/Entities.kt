@@ -7,14 +7,15 @@ import androidx.room.PrimaryKey
 data class UserEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val role: String, // "buyer", "seller", "broker", "admin"
+    val role: String, // "user", "admin"
     val phoneNumber: String,
     val email: String,
     val bio: String,
     val isVerified: Boolean = false,
     val rating: Float = 5.0f,
     val avatarUrl: String = "",
-    val kebele: String = "Kebele 01"
+    val kebele: String = "Kebele 01",
+    val password: String = "1234"
 )
 
 @Entity(tableName = "listings")
@@ -31,9 +32,10 @@ data class ListingEntity(
     val latitude: Double = 7.3114,
     val longitude: Double = 37.9867,
     val imageUrls: String = "", // Comma-separated image descriptors or references
-    val videoUrl: String = "",
+    val videoUrl: String = "", // Comma-separated video descriptors or references
     val sellerId: String,
     val sellerName: String,
+    val sellerPhone: String = "",
     val assignedBrokerId: String = "",
     val assignedBrokerName: String = "",
     val datePosted: Long = System.currentTimeMillis(),

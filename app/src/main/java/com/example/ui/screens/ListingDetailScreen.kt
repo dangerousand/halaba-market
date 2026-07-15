@@ -39,8 +39,8 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
 
     // Form states for scheduling
     var meetingTitle by remember { mutableStateOf("Site Inspection: ${listing.title}") }
-    var meetingDate by remember { mutableStateOf("2026-07-16") }
-    var meetingTime by remember { mutableStateOf("10:00 AM") }
+    var meetingDate by remember { mutableStateOf("") }
+    var meetingTime by remember { mutableStateOf("") }
     var meetingNote by remember { mutableStateOf("") }
 
     // Form states for reviews
@@ -100,53 +100,95 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Hero Visual Presentation
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                HalabaDarkGreen,
-                                HalabaSoftGreen
-                            )
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                val emoji = when (listing.category) {
-                    "Land" -> "⛰️"
-                    "Houses" -> "🏠"
-                    "Bajaj" -> "🛺"
-                    "Spices" -> "🌶️"
-                    "Livestock" -> "🐐"
-                    else -> "📦"
-                }
-                Text(text = emoji, fontSize = 90.sp)
+            // Hero Visual Presentation (supports multiple images swipe/scroll)
+            val imagesList = listing.imageUrls.split(",").filter { it.isNotEmpty() }
+            val videosList = listing.videoUrl.split(",").filter { it.isNotEmpty() }
 
-                // Bottom Overlay for Views/Favorites
+            if (imagesList.size > 1) {
+                // Horizontal scroll of multiple images
                 Row(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(ObsidianDark.copy(alpha = 0.6f))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "👁️ ${listing.viewCount} Views",
-                        fontSize = 11.sp,
-                        color = PureWhite,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "❤️ ${listing.favoriteCount} Saved",
-                        fontSize = 11.sp,
-                        color = PureWhite,
-                        fontWeight = FontWeight.Bold
-                    )
+                    imagesList.forEachIndexed { idx, img ->
+                        Box(
+                            modifier = Modifier
+                                .width(360.dp)
+                                .fillMaxHeight()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            HalabaDarkGreen,
+                                            HalabaSoftGreen
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "📸 Product Photo ${idx + 1}", fontSize = 24.sp, color = PureWhite, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Swipe for more →", 
+                                fontSize = 11.sp, 
+                                color = PureWhite.copy(alpha = 0.6f), 
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    HalabaDarkGreen,
+                                    HalabaSoftGreen
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val emoji = when (listing.category) {
+                        "Land" -> "⛰️"
+                        "Houses" -> "🏠"
+                        "Vehicles" -> "🛺"
+                        "Agricultural Products" -> "🌶️"
+                        "Livestock" -> "🐐"
+                        "Electronics" -> "⚡"
+                        "Phones" -> "📱"
+                        else -> "📦"
+                    }
+                    Text(text = emoji, fontSize = 90.sp)
+
+                    // Bottom Overlay for Views/Favorites
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(16.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ObsidianDark.copy(alpha = 0.6f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "👁️ ${listing.viewCount} Views",
+                            fontSize = 11.sp,
+                            color = PureWhite,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "❤️ ${listing.favoriteCount} Saved",
+                            fontSize = 11.sp,
+                            color = PureWhite,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -165,7 +207,7 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
-                            text = "Category: ${listing.category} • Subcategory: ${listing.subcategory}",
+                            text = "Category: ${listing.category} • Location: ${listing.kebele}",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                             modifier = Modifier.padding(top = 4.dp)
@@ -234,6 +276,40 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                     lineHeight = 20.sp
                 )
 
+                // Render Attached Videos list
+                if (videosList.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Attached Videos (${videosList.size})",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        videosList.forEachIndexed { idx, vid ->
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(HalabaGold.copy(alpha = 0.15f))
+                                    .border(1.dp, HalabaGold, RoundedCornerShape(8.dp))
+                                    .clickable { /* simulated video player */ }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.PlayArrow, "Play", tint = HalabaGold, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Play Video ${idx + 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = HalabaDarkGreen)
+                            }
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // Location Details & Interactive canvas drawing map
@@ -263,99 +339,97 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Assigned Broker Card
-                if (broker != null) {
-                    Text(
-                        text = "Assigned City Broker",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(HalabaDarkGreen),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(text = "🤝", fontSize = 20.sp)
-                                }
-                                
-                                Spacer(modifier = Modifier.width(12.dp))
-                                
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = broker.name,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Text(
-                                        text = "⭐ ${broker.rating} rating • Verified Broker",
-                                        fontSize = 11.sp,
-                                        color = HalabaGold,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                // Direct Seller Details Card (No brokers, direct connection)
+                Text(
+                    text = "Direct Seller Information",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(HalabaSoftGreen),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "👤", fontSize = 20.sp)
+                            }
+                            
+                            Spacer(modifier = Modifier.width(12.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = listing.sellerName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Location: ${listing.kebele} • Active Seller",
+                                    fontSize = 12.sp,
+                                    color = TextGray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "Phone Number: ${listing.sellerPhone.ifEmpty { "+251 911 22 3344" }}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = HalabaDarkGreen
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    viewModel.chatPartnerId = listing.sellerId
+                                    viewModel.currentScreenRoute = "chat"
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = HalabaSoftGreen),
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Icon(Icons.Default.Chat, "Chat", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("In-App Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = broker.bio,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            OutlinedButton(
+                                onClick = {
+                                    // Simulated call popup
+                                    viewModel.createAppointment(
+                                        title = "Phone Call with Seller",
+                                        date = "Today",
+                                        time = "Now",
+                                        partnerUserId = listing.sellerId,
+                                        note = "Called seller directly at ${listing.sellerPhone}"
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, HalabaSoftGreen),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = HalabaSoftGreen)
                             ) {
-                                Button(
-                                    onClick = {
-                                        viewModel.chatPartnerId = broker.id
-                                        viewModel.currentScreenRoute = "chat"
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = HalabaSoftGreen),
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Icon(Icons.Default.Chat, "Chat", modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Chat", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        // Trigger a simulated phone call alert
-                                        viewModel.createAppointment(
-                                            title = "Simulated Phone Call",
-                                            date = "Today",
-                                            time = "Now",
-                                            partnerUserId = broker.id,
-                                            note = "Phone conversation initiated with broker."
-                                        )
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, HalabaSoftGreen),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = HalabaSoftGreen)
-                                ) {
-                                    Icon(Icons.Default.Call, "Call", modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Call", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Icon(Icons.Default.Call, "Call", modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Direct Call", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -388,7 +462,7 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.RateReview, "Review")
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Write a Service Review", fontWeight = FontWeight.Bold)
+                    Text("Write a Seller Review", fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -412,7 +486,13 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                 // Main call trigger
                 Button(
                     onClick = {
-                        // Simulated phone trigger
+                        viewModel.createAppointment(
+                            title = "Phone Call with Seller",
+                            date = "Today",
+                            time = "Now",
+                            partnerUserId = listing.sellerId,
+                            note = "Direct call initiated."
+                        )
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = HalabaCrimson),
                     shape = RoundedCornerShape(8.dp),
@@ -420,7 +500,7 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
                 ) {
                     Icon(Icons.Default.Call, "Call")
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Direct Call", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text("Call: ${listing.sellerPhone.ifEmpty { "+251911223344" }}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -460,7 +540,7 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Coordinate an offline meeting with broker ${broker?.name ?: "Admin"} to inspect this listing.",
+                        text = "Coordinate an offline meeting with seller ${listing.sellerName} to inspect this listing.",
                         fontSize = 12.sp,
                         color = TextGray
                     )
@@ -516,11 +596,11 @@ fun ListingDetailScreen(viewModel: MainViewModel) {
     if (showReviewDialog) {
         AlertDialog(
             onDismissRequest = { showReviewDialog = false },
-            title = { Text("Write Service Review", fontWeight = FontWeight.Bold) },
+            title = { Text("Write Seller Review", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Help the Halaba community by rating the transaction service of seller ${listing.sellerName} or broker ${listing.assignedBrokerName}.",
+                        text = "Help the Halaba community by rating the transaction service of seller ${listing.sellerName}.",
                         fontSize = 12.sp,
                         color = TextGray
                     )

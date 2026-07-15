@@ -93,7 +93,7 @@ fun SplashScreen(viewModel: MainViewModel) {
             )
 
             Text(
-                text = "HALABA BROKER",
+                text = "HALABA MARKET",
                 fontSize = 28.sp,
                 color = HalabaGold,
                 fontWeight = FontWeight.Bold,
@@ -113,7 +113,7 @@ fun SplashScreen(viewModel: MainViewModel) {
             
             // Subtitle indicating connection
             Text(
-                text = "Buyers • Sellers • Brokers",
+                text = "Buyers • Sellers • Local Market",
                 fontSize = 12.sp,
                 color = Color.LightGray.copy(alpha = 0.6f),
                 fontWeight = FontWeight.Light,

@@ -28,23 +28,44 @@ import com.example.ui.theme.*
 fun OnboardingScreen(viewModel: MainViewModel) {
     var currentPage by remember { mutableStateOf(0) }
     
-    val pages = listOf(
-        OnboardingPageData(
-            emoji = "🌶️",
-            title = "Welcome to Halaba",
-            description = "The first digital portal built specifically for Halaba City, Ethiopia. Connect with local crop growers, property owners, and transits securely."
-        ),
-        OnboardingPageData(
-            emoji = "🛺",
-            title = "Verified Listings",
-            description = "Browse high-quality land plots, traditional houses, TVS Bajaj vehicles, livestock, and spices. All listings are mapped to specific local Kebeles."
-        ),
-        OnboardingPageData(
-            emoji = "🤝",
-            title = "Assigned Local Brokers",
-            description = "Let our top verified city brokers handle site visits, municipal paperwork clearance, and price negotiations to protect you from fraud."
+    val isAmharic = viewModel.selectedLanguage == "Amharic"
+    val pages = if (isAmharic) {
+        listOf(
+            OnboardingPageData(
+                emoji = "🌶️",
+                title = "ወደ ሀላባ እንኳን ደህና መጡ",
+                description = "ለኢትዮጵያ ሀላባ ከተማ ተብሎ በተለየ ሁኔታ የተሰራ የመጀመሪያው ዲጂታል መግቢያ። ከአካባቢው ሰብል አምራቾች፣ የንብረት ባለቤቶች እና ትራንዚቶች ጋር ደህንነቱ በተጠበቀ ሁኔታ ይገናኙ።"
+            ),
+            OnboardingPageData(
+                emoji = "🛺",
+                title = "የተረጋገጡ ዝርዝሮች",
+                description = "ከፍተኛ ጥራት ያላቸውን የይዞታ መሬቶች፣ ባህላዊ ቤቶች፣ ቲቪኤስ ባጃጅ ተሽከርካሪዎች፣ ከብቶች እና ቅመማ ቅመሞችን ይፈልጉ። ሁሉም ዝርዝሮች ከተወሰኑ የየአካባቢው ቀበሌዎች ጋር የተገናኙ ናቸው።"
+            ),
+            OnboardingPageData(
+                emoji = "🤝",
+                title = "የተመደቡ የአካባቢ ደላላዎች",
+                description = "ከማጭበርበር እርስዎን ለመጠበቅ የእኛ ምርጥ የተረጋገጡ የከተማ ደላላዎች ቦታዎችን መጎብኘት፣ የማዘጋጃ ቤት ወረቀት ስራዎችን ማጠናቀቅ እና የዋጋ ድርድርን እንዲያከናውኑ ያድርጉ።"
+            )
         )
-    )
+    } else {
+        listOf(
+            OnboardingPageData(
+                emoji = "🌶️",
+                title = "Welcome to Halaba",
+                description = "The first digital portal built specifically for Halaba City, Ethiopia. Connect with local crop growers, property owners, and transits securely."
+            ),
+            OnboardingPageData(
+                emoji = "🛺",
+                title = "Verified Listings",
+                description = "Browse high-quality land plots, traditional houses, TVS Bajaj vehicles, livestock, and spices. All listings are mapped to specific local Kebeles."
+            ),
+            OnboardingPageData(
+                emoji = "🤝",
+                title = "Assigned Local Brokers",
+                description = "Let our top verified city brokers handle site visits, municipal paperwork clearance, and price negotiations to protect you from fraud."
+            )
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -142,7 +163,7 @@ fun OnboardingScreen(viewModel: MainViewModel) {
                         onClick = { viewModel.currentScreenRoute = "login" }
                     ) {
                         Text(
-                            text = "Skip",
+                            text = if (isAmharic) "አልፍ" else "Skip",
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                             fontWeight = FontWeight.SemiBold
                         )
@@ -165,13 +186,17 @@ fun OnboardingScreen(viewModel: MainViewModel) {
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = if (currentPage == pages.size - 1) "Get Started" else "Next",
+                                text = if (currentPage == pages.size - 1) {
+                                    if (isAmharic) "ጀምር" else "Get Started"
+                                } else {
+                                    if (isAmharic) "ቀጥል" else "Next"
+                                },
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(end = 4.dp)
                             )
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Next",
+                                contentDescription = if (isAmharic) "ቀጥል" else "Next",
                                 modifier = Modifier.size(16.dp)
                             )
                         }

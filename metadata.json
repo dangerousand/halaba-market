@@ -1,6 +1,6 @@
 {
-  "name": "Halaba Broker",
-  "description": "Halaba Broker connects buyers, sellers, and brokers within Halaba City, Ethiopia, featuring localized search, live messaging, scheduling, maps, and an AI-powered assistant.",
+  "name": "Halaba Market",
+  "description": "Halaba Market connects buyers, sellers, and locals within Halaba City, Ethiopia, featuring localized product search, listings, live messaging, and an AI-powered assistant.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
